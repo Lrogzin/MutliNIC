@@ -18,7 +18,6 @@ namespace MultiNIC
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            richTextBox1.Text = cmd.RunCmd("netsh interface ip add route /?");
             //华软操作
             String ip = "";
             ip = cmd.GetIP();
@@ -67,8 +66,18 @@ namespace MultiNIC
 
         private void pictureBox1_Click(object sender, EventArgs e)
         {
-            关于 ab = new 关于();
-            ab.Show();
+            richTextBox1.Text = cmd.RunCmd("netsh interface ip add route /?");
+        }
+
+        private void button3_Click_1(object sender, EventArgs e)
+        {
+            DialogResult dr = MessageBox.Show("恢复默认路由将删除0.0.0.0的路由，若您新增了其他路由，请手动删除！\n恢复过程请耐心等待几秒\n\n是否恢复默认路由？", "提示", MessageBoxButtons.YesNo);
+            if (dr == DialogResult.Yes)
+            {
+                cmd.RunCmd("route delete 0.0.0.0");
+                richTextBox1.Text= cmd.RunCmd("ipconfig /renew");
+            }
+            
         }
     }
 }
