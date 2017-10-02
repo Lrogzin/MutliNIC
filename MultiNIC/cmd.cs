@@ -42,19 +42,28 @@ namespace MultiNIC
 
         public string GetIP()
         {
+            String ip = "";
             System.Net.HttpWebRequest request = (HttpWebRequest)WebRequest.Create("http://1.1.1.1:8000/ext_portal.magi?url=http://www.baidu.com/&radnum=155358&a.magi");
             request.Method = "GET";
             request.ContentType = "text/html;charset=gb2312";
             request.UserAgent = null;
             request.Timeout = 3000;
-            System.Net.HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            Stream myResponseStream = response.GetResponseStream();
-            StreamReader myStreamReader = new StreamReader(myResponseStream, System.Text.Encoding.GetEncoding("gb2312"));
-            string retString = myStreamReader.ReadToEnd();
-            myStreamReader.Close();
-            myResponseStream.Close();
-            String ip = GetValue(retString, "userip=", "&wlanacname");
+            try
+            {
+                System.Net.HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+                Stream myResponseStream = response.GetResponseStream();
+                StreamReader myStreamReader = new StreamReader(myResponseStream, System.Text.Encoding.GetEncoding("gb2312"));
+                string retString = myStreamReader.ReadToEnd();
+                myStreamReader.Close();
+                myResponseStream.Close();
+                ip = GetValue(retString, "userip=", "&wlanacname");
+                
+            }
+            catch (Exception ex) {
+                return "";
+            }
             return ip;
+
         }
 
         public string GetValue(string str, string s, string e)
