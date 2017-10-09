@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
+using System.IO;
+using System.Net;
+using System.Security.Principal;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace MultiNIC
@@ -18,11 +18,15 @@ namespace MultiNIC
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            if (!IsAdministrator()) {
+                MessageBox.Show("获取管理员权限失败，请以管理员权限运行！");
+                System.Environment.Exit(0);
+            }
             //华软操作
             String ip = "";
-            ip = cmd.GetIP();
+            ip = GetIP();
             if (ip != "") {
-                textBox_lan_nexthop.Text = cmd.GetGetway(ip);
+                textBox_lan_nexthop.Text = GetGetway(ip);
                 cmd.RunCmd("route add 1.1.1.1/32 " + textBox_lan_nexthop.Text);
             }            
         }
@@ -71,13 +75,63 @@ namespace MultiNIC
 
         private void button3_Click_1(object sender, EventArgs e)
         {
-            DialogResult dr = MessageBox.Show("恢复默认路由将删除0.0.0.0的路由，若您新增了其他路由，请手动删除！\n恢复过程请耐心等待几秒\n\n是否恢复默认路由？", "提示", MessageBoxButtons.YesNo);
+            DialogResult dr = MessageBox.Show("恢复过程请耐心等待几秒\n\n是否恢复默认路由？", "提示", MessageBoxButtons.YesNo);
             if (dr == DialogResult.Yes)
             {
-                cmd.RunCmd("route delete 0.0.0.0");
-                richTextBox1.Text= cmd.RunCmd("ipconfig /renew");
+                cmd.RunCmd("route -f");
+                cmd.RunCmd("ipconfig /release");
+                cmd.RunCmd("ipconfig /renew");
+                richTextBox1.Text = cmd.RunCmd("route print -4");
+                MessageBox.Show("恢复完成！");
             }
             
+        }
+
+        public bool IsAdministrator()
+        {
+            WindowsIdentity current = WindowsIdentity.GetCurrent();
+            WindowsPrincipal windowsPrincipal = new WindowsPrincipal(current);
+            return windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+
+        public string GetIP()
+        {
+            String ip = "";
+            System.Net.HttpWebRequest request = (HttpWebRequest)WebRequest.Create("http://1.1.1.1:8000/ext_portal.magi?url=http://www.baidu.com/&radnum=155358&a.magi");
+            request.Method = "GET";
+            request.ContentType = "text/html;charset=gb2312";
+            request.UserAgent = null;
+            request.Timeout = 6000;
+            try
+            {
+                System.Net.HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+                Stream myResponseStream = response.GetResponseStream();
+                StreamReader myStreamReader = new StreamReader(myResponseStream, System.Text.Encoding.GetEncoding("gb2312"));
+                string retString = myStreamReader.ReadToEnd();
+                myStreamReader.Close();
+                myResponseStream.Close();
+                ip = GetValue(retString, "userip=", "&wlanacname");
+
+            }
+            catch (Exception ex)
+            {
+                return "";
+            }
+            return ip;
+
+        }
+
+        public string GetValue(string str, string s, string e)
+        {
+            Regex rg = new Regex("(?<=(" + s + "))[.\\s\\S]*?(?=(" + e + "))", RegexOptions.Multiline | RegexOptions.Singleline);
+            return rg.Match(str).Value;
+        }
+
+        public string GetGetway(string ip)
+        {
+            Regex rg = new Regex("\\.\\d{1,3}$", RegexOptions.Multiline | RegexOptions.Singleline);
+            String getway = ip.Replace(rg.Match(ip).Value, ".254");
+            return getway;
         }
     }
 }
